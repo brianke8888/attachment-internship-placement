@@ -1,0 +1,16 @@
+# Dependencies
+backend/node_modules/
+
+# Environment
+backend/.env
+
+# Uploaded CVs (keep folder, ignore files)
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
