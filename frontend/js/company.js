@@ -372,7 +372,7 @@ async function initApplicants() {
                 </div>
               </div>
               <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
-                ${a.cv_file_name ? `<a class="btn btn-outline btn-sm" href="http://localhost:5000/uploads/${encodeURIComponent(a.cv_file_name)}" target="_blank">View CV</a>` : ''}
+                ${a.cv_file_name ? `<a class="btn btn-outline btn-sm" href="/uploads/${encodeURIComponent(a.cv_file_name)}" target="_blank">View CV</a>` : ''}
                 <select class="form-select status-select" data-id="${a.id}" style="width:160px;">
                   ${['pending','reviewed','shortlisted','accepted','rejected'].map(s => `<option value="${s}" ${a.status === s ? 'selected' : ''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
                 </select>

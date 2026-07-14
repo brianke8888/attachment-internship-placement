@@ -352,7 +352,7 @@ async function loadApplications() {
                   <td class="muted">${escapeHtml(a.company_name)}</td>
                   <td>${statusBadge(a.status)}</td>
                   <td class="text-xs muted">${relativeTime(a.created_at)}</td>
-                  <td>${a.cv_file_name ? `<a href="http://localhost:5000/uploads/${encodeURIComponent(a.cv_file_name)}" target="_blank" class="text-sm">View</a>` : '<span class="muted">—</span>'}</td>
+                  <td>${a.cv_file_name ? `<a href="/uploads/${encodeURIComponent(a.cv_file_name)}" target="_blank" class="text-sm">View</a>` : '<span class="muted">—</span>'}</td>
                 </tr>`).join('')}
             </tbody>
           </table>
@@ -453,11 +453,11 @@ function loadReports() {
 
   document.getElementById('report-apps').addEventListener('click', () => {
     const token = localStorage.getItem('token')
-    window.open(`http://localhost:5000/api/admin/reports/applications?${Date.now()}`, '_blank')
+    window.open(`/api/admin/reports/applications?${Date.now()}`, '_blank')
   })
 
   document.getElementById('report-users').addEventListener('click', () => {
-    window.open(`http://localhost:5000/api/admin/reports/users?${Date.now()}`, '_blank')
+    window.open(`/api/admin/reports/users?${Date.now()}`, '_blank')
   })
 }
 

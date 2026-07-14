@@ -327,7 +327,7 @@ function connectSocket() {
 function initSocketConnection(token) {
   if (socket && socket.connected) return
 
-  const serverUrl = 'http://localhost:5000'
+  const serverUrl = window.location.origin
   socket = io(serverUrl, { auth: { token } })
 
   socket.on('connect', () => {

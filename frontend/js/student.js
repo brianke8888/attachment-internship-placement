@@ -129,7 +129,7 @@ async function initDashboard() {
           <div class="card-body">
             <div style="margin-bottom:12px;"><div class="text-xs subtle" style="text-transform:uppercase;">Course</div><div style="font-weight:500;">${escapeHtml(profile.course) || '—'}</div></div>
             <div style="margin-bottom:12px;"><div class="text-xs subtle" style="text-transform:uppercase;">Skills</div>${profile.skills ? `<div style="margin-top:4px;">${skillsList(profile.skills)}</div>` : '<div class="muted">—</div>'}</div>
-            <div style="margin-bottom:16px;"><div class="text-xs subtle" style="text-transform:uppercase;">CV</div>${profile.cv_file_name ? `<a href="http://localhost:5000/uploads/${encodeURIComponent(profile.cv_file_name)}" target="_blank" class="text-sm" style="display:inline-flex;align-items:center;gap:4px;">View CV</a>` : '<div class="muted">Not uploaded</div>'}</div>
+            <div style="margin-bottom:16px;"><div class="text-xs subtle" style="text-transform:uppercase;">CV</div>${profile.cv_file_name ? `<a href="/uploads/${encodeURIComponent(profile.cv_file_name)}" target="_blank" class="text-sm" style="display:inline-flex;align-items:center;gap:4px;">View CV</a>` : '<div class="muted">Not uploaded</div>'}</div>
             <button class="btn btn-outline btn-block" onclick="location.href='${navUrl('student-profile.html')}'">Edit profile</button>
           </div>
         </div>
@@ -172,7 +172,7 @@ async function initProfile() {
               <div class="form-group">
                 <label class="form-label">CV / Resume (PDF, DOC, DOCX — max 5MB)</label>
                 <input type="file" class="form-input" id="cv" accept=".pdf,.doc,.docx" />
-                ${profile.cv_file_name ? `<div class="form-hint">Current CV: <a href="http://localhost:5000/uploads/${encodeURIComponent(profile.cv_file_name)}" target="_blank">View</a> (uploading a new file replaces it)</div>` : ''}
+                ${profile.cv_file_name ? `<div class="form-hint">Current CV: <a href="/uploads/${encodeURIComponent(profile.cv_file_name)}" target="_blank">View</a> (uploading a new file replaces it)</div>` : ''}
               </div>
             </div>
             <div class="card-footer">
