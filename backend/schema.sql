@@ -1,14 +1,14 @@
 -- ============================================================
 -- Attachment & Internship Placement System
 -- MySQL Schema (DDL only)
--- Run: mysql -u root -p < schema.sql
 --
--- Demo data is inserted by:  npm run seed   (uses real bcrypt hashes)
+-- For local MySQL:
+--   mysql -u root -p < schema.sql
+--
+-- For PlanetScale:
+--   Connect via PlanetScale shell or dashboard and run
+--   the CREATE TABLE statements below.
 -- ============================================================
-
-DROP DATABASE attachment_system;
-CREATE DATABASE attachment_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE attachment_system;
 
 -- ----------------------------
 -- Users (all roles)
@@ -113,4 +113,3 @@ CREATE TABLE notifications (
 ) ENGINE=InnoDB;
 
 -- Done. Now run:  npm run seed
-SELECT 'Schema created. Run "npm run seed" to insert demo data.' AS message;
