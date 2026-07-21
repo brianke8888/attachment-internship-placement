@@ -1,18 +1,4 @@
--- ============================================================
--- Attachment & Internship Placement System
--- MySQL Schema (DDL only)
---
--- For local MySQL:
---   mysql -u root -p < schema.sql
---
--- For PlanetScale:
---   Connect via PlanetScale shell or dashboard and run
---   the CREATE TABLE statements below.
--- ============================================================
 
--- ----------------------------
--- Users (all roles)
--- ----------------------------
 CREATE TABLE users (
   id                  INT AUTO_INCREMENT PRIMARY KEY,
   name                VARCHAR(255) NOT NULL,
@@ -25,9 +11,7 @@ CREATE TABLE users (
   created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- ----------------------------
--- Student profiles
--- ----------------------------
+
 CREATE TABLE student_profiles (
   id               INT AUTO_INCREMENT PRIMARY KEY,
   user_id          INT NOT NULL UNIQUE,
@@ -42,9 +26,7 @@ CREATE TABLE student_profiles (
   CONSTRAINT fk_student_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ----------------------------
--- Company profiles
--- ----------------------------
+
 CREATE TABLE company_profiles (
   id               INT AUTO_INCREMENT PRIMARY KEY,
   user_id          INT NOT NULL UNIQUE,
@@ -60,9 +42,7 @@ CREATE TABLE company_profiles (
   CONSTRAINT fk_company_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ----------------------------
--- Internships
--- ----------------------------
+
 CREATE TABLE internships (
   id           INT AUTO_INCREMENT PRIMARY KEY,
   company_id   INT NOT NULL,
@@ -80,9 +60,7 @@ CREATE TABLE internships (
   CONSTRAINT fk_internship_company FOREIGN KEY (company_id) REFERENCES company_profiles(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ----------------------------
--- Applications
--- ----------------------------
+
 CREATE TABLE applications (
   id            INT AUTO_INCREMENT PRIMARY KEY,
   student_id    INT NOT NULL,
@@ -96,9 +74,7 @@ CREATE TABLE applications (
   CONSTRAINT fk_app_internship FOREIGN KEY (internship_id) REFERENCES internships(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ----------------------------
--- Notifications
--- ----------------------------
+
 CREATE TABLE notifications (
   id         INT AUTO_INCREMENT PRIMARY KEY,
   user_id    INT NOT NULL,
@@ -112,4 +88,3 @@ CREATE TABLE notifications (
   INDEX idx_notif_user_read (user_id, is_read)
 ) ENGINE=InnoDB;
 
--- Done. Now run:  npm run seed

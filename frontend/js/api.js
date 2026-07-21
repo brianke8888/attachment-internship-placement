@@ -1,5 +1,7 @@
 // js/api.js — fetch wrapper with JWT auth header
-const API_BASE = '/api'
+const API_BASE = window.location.port === '5500'
+  ? 'http://localhost:5000/api'
+  : '/api'
 
 function getToken() {
   return localStorage.getItem('token')
