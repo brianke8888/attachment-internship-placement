@@ -2,6 +2,8 @@
 const mysql = require('mysql2/promise')
 require('dotenv').config()
 
+const isRailway = !!process.env.MYSQLHOST
+
 const poolConfig = {
   host: process.env.DB_HOST || process.env.MYSQLHOST || 'localhost',
   user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
@@ -14,7 +16,7 @@ const poolConfig = {
   charset: 'utf8mb4',
 }
 
-if (process.env.DB_SSL === 'true' || process.env.MYSQL_SSL === 'true') {
+if (isRailway || process.env.DB_SSL === 'true' || process.env.MYSQL_SSL === 'true') {
   poolConfig.ssl = { rejectUnauthorized: false }
 }
 
@@ -22,10 +24,11 @@ const pool = mysql.createPool(poolConfig)
 
 async function testConnection() {
   try {
+    console.log('Connecting to MySQL at', poolConfig.host + ':' + poolConfig.port, 'as', poolConfig.user, 'db:', poolConfig.database)
     const conn = await pool.getConnection()
     await conn.ping()
     conn.release()
-    console.log('Connected to MySQL database:', process.env.DB_NAME)
+    console.log('Connected to MySQL database:', poolConfig.database)
   } catch (err) {
     console.error('MySQL connection failed:', err.message)
     console.error('Check your .env credentials and that MySQL is running.')
