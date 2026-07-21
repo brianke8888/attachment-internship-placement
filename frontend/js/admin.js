@@ -280,7 +280,8 @@ async function loadUsers() {
   try {
     const { users } = await api.getAdminUsers()
     const roleBadge = (r) => {
-      const map = { student: 'badge-emerald', company: 'badge-sky', admin: 'badge-violet' }
+      if (r === 'admin') return ''
+      const map = { student: 'badge-emerald', company: 'badge-sky' }
       return `<span class="badge ${map[r] || 'badge-slate'}">${r}</span>`
     }
     content.innerHTML = `
