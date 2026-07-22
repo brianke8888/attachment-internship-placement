@@ -5,7 +5,8 @@ const path = require('path')
 const http = require('http')
 require('dotenv').config()
 
-const { testConnection } = require('./db')
+const { testConnection, pool } = require('./db')
+const fs = require('fs')
 const socket = require('./socket')
 
 const app = express()
@@ -55,6 +56,22 @@ const PORT = process.env.PORT || 5000
 
 ;(async () => {
   await testConnection()
+
+  const schemaPath = path.join(__dirname, '..', 'db', 'init.sql')
+  if (fs.existsSync(schemaPath)) {
+    const sql = fs.readFileSync(schemaPath, 'utf8')
+    const conn = await pool.getConnection()
+    try {
+      const statements = sql.split(';').map(s => s.trim()).filter(s => s.length > 0)
+      for (const stmt of statements) {
+        await conn.query(stmt)
+      }
+      console.log('Schema verified / tables created.')
+    } finally {
+      conn.release()
+    }
+  }
+
   socket.init(server)
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)

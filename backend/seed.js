@@ -1,4 +1,6 @@
 const bcrypt = require('bcryptjs')
+const fs = require('fs')
+const path = require('path')
 const { pool } = require('./db')
 
 const COMPANIES = [
@@ -56,104 +58,125 @@ async function hash(pw) {
   return bcrypt.hash(pw, 10)
 }
 
+async function ensureSchema(conn) {
+  const schemaPath = path.join(__dirname, '..', 'db', 'init.sql')
+  if (fs.existsSync(schemaPath)) {
+    const sql = fs.readFileSync(schemaPath, 'utf8')
+    const statements = sql.split(';').map(s => s.trim()).filter(s => s.length > 0)
+    for (const stmt of statements) {
+      await conn.query(stmt)
+    }
+    console.log('Schema verified / tables created.')
+  } else {
+    console.warn('Warning: db/init.sql not found, skipping schema creation.')
+  }
+}
+
 async function main() {
   console.log('Seeding database...')
 
-  await pool.query('SET FOREIGN_KEY_CHECKS = 0')
-  await pool.query('TRUNCATE TABLE applications')
-  await pool.query('TRUNCATE TABLE internships')
-  await pool.query('TRUNCATE TABLE student_profiles')
-  await pool.query('TRUNCATE TABLE company_profiles')
-  await pool.query('TRUNCATE TABLE users')
-  await pool.query('SET FOREIGN_KEY_CHECKS = 1')
+  const conn = await pool.getConnection()
+  try {
+    await ensureSchema(conn)
 
-  const pw = await hash('12345678')
+    await conn.query('SET FOREIGN_KEY_CHECKS = 0')
+    await conn.query('TRUNCATE TABLE applications')
+    await conn.query('TRUNCATE TABLE internships')
+    await conn.query('TRUNCATE TABLE student_profiles')
+    await conn.query('TRUNCATE TABLE company_profiles')
+    await conn.query('TRUNCATE TABLE users')
+    await conn.query('SET FOREIGN_KEY_CHECKS = 1')
 
-  // Admin
-  const [adminRes] = await pool.query(
-    'INSERT INTO users (name, email, password, role) VALUES (?,?,?,?)',
-    ['System Admin', 'kipkosgeib1@gmail.com', await hash('12345678'), 'admin']
-  )
+    const pw = await hash('12345678')
 
-  // 10 Companies
-  const companyUserIds = []
-  const companyProfileIds = []
-  for (let i = 0; i < COMPANIES.length; i++) {
-    const c = COMPANIES[i]
-    const [userRes] = await pool.query(
+    // Admin
+    const [adminRes] = await pool.query(
       'INSERT INTO users (name, email, password, role) VALUES (?,?,?,?)',
-      [c.name, `hr@company${i + 1}.com`, pw, 'company']
+      ['System Admin', 'kipkosgeib1@gmail.com', await hash('12345678'), 'admin']
     )
-    companyUserIds.push(userRes.insertId)
 
-    const [profRes] = await pool.query(
-      `INSERT INTO company_profiles (user_id, company_name, industry, description, website, location, profile_complete, status)
-       VALUES (?,?,?,?,?,?,1,'approved')`,
-      [userRes.insertId, c.name, c.industry, c.desc, c.web, c.loc]
-    )
-    companyProfileIds.push(profRes.insertId)
-  }
-
-  // 20 Students
-  const studentUserIds = []
-  const studentProfileIds = []
-  for (let i = 0; i < STUDENTS.length; i++) {
-    const s = STUDENTS[i]
-    const [userRes] = await pool.query(
-      'INSERT INTO users (name, email, password, role) VALUES (?,?,?,?)',
-      [s.name, `student${i + 1}@uni.edu`, pw, 'student']
-    )
-    studentUserIds.push(userRes.insertId)
-
-    const phone = `+254 7${String(Math.floor(10 + Math.random() * 90)).padStart(2, '0')} ${String(Math.floor(100 + Math.random() * 900)).padStart(3, '0')} ${String(Math.floor(100 + Math.random() * 900)).padStart(3, '0')}`
-    const bio = `${s.name.split(' ')[0]} is a passionate ${s.course} student looking for an internship to apply their skills in ${s.skills.split(',')[0]} and grow professionally.`
-
-    const [profRes] = await pool.query(
-      `INSERT INTO student_profiles (user_id, course, skills, phone, bio, profile_complete)
-       VALUES (?,?,?,?,?,1)`,
-      [userRes.insertId, s.course, s.skills, phone, bio]
-    )
-    studentProfileIds.push(profRes.insertId)
-  }
-
-  // Internships
-  const internshipIds = []
-  const deadline = (days) => {
-    const d = new Date(); d.setDate(d.getDate() + days); return d.toISOString().slice(0, 10)
-  }
-
-  for (const int of INTERNSHIPS_DATA) {
-    const [iRes] = await pool.query(
-      `INSERT INTO internships (company_id, title, description, requirements, location, duration, category, deadline, status, is_approved)
-       VALUES (?,?,?,?,?,?,?,?,'open',1)`,
-      [companyProfileIds[int.companyIdx], int.title, int.desc, int.req, int.loc, int.dur, int.cat, deadline(int.deadlineDays)]
-    )
-    internshipIds.push(iRes.insertId)
-  }
-
-  // Sample applications (first few students apply to first few internships)
-  for (let s = 0; s < 5; s++) {
-    for (let i = 0; i < 3; i++) {
-      const idx = (s + i) % internshipIds.length
-      await pool.query(
-        `INSERT IGNORE INTO applications (student_id, internship_id, cover_letter, status) VALUES (?,?,?,?)`,
-        [studentProfileIds[s], internshipIds[idx],
-         `I am excited to apply for this opportunity. As a ${STUDENTS[s].course} student with skills in ${STUDENTS[s].skills}, I believe I would be a great fit.`,
-         'pending']
+    // 10 Companies
+    const companyUserIds = []
+    const companyProfileIds = []
+    for (let i = 0; i < COMPANIES.length; i++) {
+      const c = COMPANIES[i]
+      const [userRes] = await pool.query(
+        'INSERT INTO users (name, email, password, role) VALUES (?,?,?,?)',
+        [c.name, `hr@company${i + 1}.com`, pw, 'company']
       )
-    }
-  }
+      companyUserIds.push(userRes.insertId)
 
-  console.log('\n✓ Seed complete!\n')
-  console.log('Demo accounts (all use password "12345678"):')
-  console.log('  Admin:   kipkosgeib1@gmail.com   / 12345678')
-  for (let i = 0; i < COMPANIES.length; i++) {
-    console.log(`  Company: hr@company${i + 1}.com      / 12345678`)
+      const [profRes] = await pool.query(
+        `INSERT INTO company_profiles (user_id, company_name, industry, description, website, location, profile_complete, status)
+         VALUES (?,?,?,?,?,?,1,'approved')`,
+        [userRes.insertId, c.name, c.industry, c.desc, c.web, c.loc]
+      )
+      companyProfileIds.push(profRes.insertId)
+    }
+
+    // 20 Students
+    const studentUserIds = []
+    const studentProfileIds = []
+    for (let i = 0; i < STUDENTS.length; i++) {
+      const s = STUDENTS[i]
+      const [userRes] = await pool.query(
+        'INSERT INTO users (name, email, password, role) VALUES (?,?,?,?)',
+        [s.name, `student${i + 1}@uni.edu`, pw, 'student']
+      )
+      studentUserIds.push(userRes.insertId)
+
+      const phone = `+254 7${String(Math.floor(10 + Math.random() * 90)).padStart(2, '0')} ${String(Math.floor(100 + Math.random() * 900)).padStart(3, '0')} ${String(Math.floor(100 + Math.random() * 900)).padStart(3, '0')}`
+      const bio = `${s.name.split(' ')[0]} is a passionate ${s.course} student looking for an internship to apply their skills in ${s.skills.split(',')[0]} and grow professionally.`
+
+      const [profRes] = await pool.query(
+        `INSERT INTO student_profiles (user_id, course, skills, phone, bio, profile_complete)
+         VALUES (?,?,?,?,?,1)`,
+        [userRes.insertId, s.course, s.skills, phone, bio]
+      )
+      studentProfileIds.push(profRes.insertId)
+    }
+
+    // Internships
+    const internshipIds = []
+    const deadline = (days) => {
+      const d = new Date(); d.setDate(d.getDate() + days); return d.toISOString().slice(0, 10)
+    }
+
+    for (const int of INTERNSHIPS_DATA) {
+      const [iRes] = await pool.query(
+        `INSERT INTO internships (company_id, title, description, requirements, location, duration, category, deadline, status, is_approved)
+         VALUES (?,?,?,?,?,?,?,?,'open',1)`,
+        [companyProfileIds[int.companyIdx], int.title, int.desc, int.req, int.loc, int.dur, int.cat, deadline(int.deadlineDays)]
+      )
+      internshipIds.push(iRes.insertId)
+    }
+
+    // Sample applications (first few students apply to first few internships)
+    for (let s = 0; s < 5; s++) {
+      for (let i = 0; i < 3; i++) {
+        const idx = (s + i) % internshipIds.length
+        await pool.query(
+          `INSERT IGNORE INTO applications (student_id, internship_id, cover_letter, status) VALUES (?,?,?,?)`,
+          [studentProfileIds[s], internshipIds[idx],
+           `I am excited to apply for this opportunity. As a ${STUDENTS[s].course} student with skills in ${STUDENTS[s].skills}, I believe I would be a great fit.`,
+           'pending']
+        )
+      }
+    }
+
+    console.log('\n✓ Seed complete!\n')
+    console.log('Demo accounts (all use password "12345678"):')
+    console.log('  Admin:   kipkosgeib1@gmail.com   / 12345678')
+    for (let i = 0; i < COMPANIES.length; i++) {
+      console.log(`  Company: hr@company${i + 1}.com      / 12345678`)
+    }
+    for (let i = 0; i < STUDENTS.length; i++) {
+      console.log(`  Student: student${i + 1}@uni.edu      / 12345678`)
+    }
+    console.log(`\nInserted: 1 admin, ${COMPANIES.length} companies, ${STUDENTS.length} students, ${INTERNSHIPS_DATA.length} internships, 15 applications`)
+  } finally {
+    conn.release()
   }
-  for (let i = 0; i < STUDENTS.length; i++) {
-    console.log(`  Student: student${i + 1}@uni.edu      / 12345678`)
-  }
-  console.log(`\nInserted: 1 admin, ${COMPANIES.length} companies, ${STUDENTS.length} students, ${INTERNSHIPS_DATA.length} internships, 15 applications`)
 
   await pool.end()
   process.exit(0)
