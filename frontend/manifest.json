@@ -2,7 +2,7 @@
   "name": "PlacementHub - Attachment & Internship Placement",
   "short_name": "PlacementHub",
   "description": "A complete attachment & internship placement platform for students, companies, and administrators.",
-  "start_url": "/landing.html",
+  "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#059669",

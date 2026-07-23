@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>PlacementHub — Attachment & Internship Placement</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon-192.svg" />
+  <meta name="theme-color" content="#059669" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="PlacementHub" />
+  <script>if(localStorage.getItem('theme')==='dark'||(!localStorage.getItem('theme')&&matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.setAttribute('data-theme','dark')</script>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="auth-main">
+    <div class="auth-card">
+        <div style="display:flex;justify-content:flex-end;padding:0 4px;">
+          <button class="btn btn-ghost btn-sm" id="auth-theme-btn" title="Toggle theme"></button>
+        </div>
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-mode="login">Sign In</button>
+          <button class="auth-tab" data-mode="register">Create Account</button>
+        </div>
+
+        <!-- Login form -->
+        <form id="login-form">
+          <h2 style="font-size:20px;font-weight:700;margin-bottom:4px;">Welcome back</h2>
+          <p class="muted text-sm" style="margin-bottom:20px;">Sign in to your PlacementHub account</p>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-input" id="login-email" required autocomplete="email" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-input" id="login-password" required autocomplete="current-password" />
+          </div>
+          <div style="text-align:right;margin-top:-8px;margin-bottom:12px;">
+            <button type="button" class="btn btn-ghost btn-sm" id="forgot-link" style="font-size:13px;color:var(--primary);">Forgot password?</button>
+          </div>
+          <div id="login-error"></div>
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="login-btn">Sign In</button>
+        </form>
+
+        <!-- Forgot password form -->
+        <form id="forgot-form" style="display:none;">
+          <h2 style="font-size:20px;font-weight:700;margin-bottom:4px;">Reset password</h2>
+          <p class="muted text-sm" style="margin-bottom:20px;">Enter your email and we'll send you a reset link.</p>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-input" id="forgot-email" required />
+          </div>
+          <div id="forgot-error"></div>
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="forgot-btn">Send Reset Link</button>
+          <button type="button" class="btn btn-ghost btn-block" id="forgot-back" style="margin-top:8px;">Back to Sign In</button>
+        </form>
+
+        <!-- Register form -->
+        <form id="register-form" style="display:none;">
+          <h2 style="font-size:20px;font-weight:700;margin-bottom:4px;">Create your account</h2>
+          <p class="muted text-sm" style="margin-bottom:20px;">Join PlacementHub as a student or company</p>
+          <div class="form-group">
+            <label class="form-label">Full name</label>
+            <input type="text" class="form-input" id="reg-name" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-input" id="reg-email" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-input" id="reg-password" required minlength="6" placeholder="At least 6 characters" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">I am a...</label>
+            <div class="auth-role-grid">
+              <label class="auth-role">
+                <input type="radio" name="role" value="student" checked />
+                <div>
+                  <div class="auth-role-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/></svg>
+                    Student
+                  </div>
+                  <div class="auth-role-desc">Find and apply to internships</div>
+                </div>
+              </label>
+              <label class="auth-role">
+                <input type="radio" name="role" value="company" />
+                <div>
+                  <div class="auth-role-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/></svg>
+                    Company
+                  </div>
+                  <div class="auth-role-desc">Post internships and hire talent</div>
+                </div>
+              </label>
+            </div>
+          </div>
+          <div id="reg-error"></div>
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="reg-btn">Create Account</button>
+          <p class="text-xs muted" style="text-align:center;margin-top:12px;">Admin accounts are provisioned separately.</p>
+        </form>
+
+        <!-- Demo accounts -->
+        <div class="auth-demo-box">
+          <div class="auth-demo-label">Demo accounts (click to fill)</div>
+          <div class="auth-demo-grid">
+            <button class="btn btn-outline btn-sm" data-demo="student">Student</button>
+            <button class="btn btn-outline btn-sm" data-demo="company">Company</button>
+            <button class="btn btn-outline btn-sm" data-demo="admin">Admin</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <script type="module" src="js/index.js"></script>
+</body>
+</html>

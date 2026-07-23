@@ -2,7 +2,7 @@ const CACHE_NAME = 'placementhub-v1'
 const PRECACHE_URLS = [
   '/',
   '/index.html',
-  '/landing.html',
+  '/auth.html',
   '/offline.html',
   '/css/style.css',
   '/js/api.js',

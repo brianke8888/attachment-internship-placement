@@ -138,7 +138,7 @@ export async function fetchMe() {
 export async function logout() {
   auth.clearToken()
   const fromPage = window.location.pathname.includes('/pages/')
-  window.location.href = fromPage ? '../index.html' : 'index.html'
+  window.location.href = fromPage ? '../auth.html' : 'auth.html'
 }
 
 // ---------- Route guard ----------
@@ -146,7 +146,7 @@ export async function logout() {
 export async function guard(role) {
   if (!isAuthenticated()) {
     const fromPage = window.location.pathname.includes('/pages/')
-    window.location.href = fromPage ? '../index.html' : 'index.html'
+  window.location.href = fromPage ? '../auth.html' : 'auth.html'
     return null
   }
   const user = getCurrentUser()
@@ -163,7 +163,7 @@ export function redirectByRole(role) {
   if (role === 'student') window.location.href = fromPage ? 'student-dashboard.html' : 'pages/student-dashboard.html'
   else if (role === 'company') window.location.href = fromPage ? 'company-dashboard.html' : 'pages/company-dashboard.html'
   else if (role === 'admin') window.location.href = fromPage ? 'admin-dashboard.html' : 'pages/admin-dashboard.html'
-  else window.location.href = fromPage ? '../index.html' : 'index.html'
+  else window.location.href = fromPage ? '../auth.html' : 'auth.html'
 }
 
 // ---------- Sidebar + topbar (shared layout) ----------
