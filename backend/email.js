@@ -42,7 +42,7 @@ async function getTransporter() {
 async function sendEmail({ to, subject, html }) {
   try {
     const t = await getTransporter()
-    const from = process.env.MAIL_FROM || '"PlacementHub" <noreply@placementhub.local>'
+    const from = process.env.MAIL_FROM || `"PlacementHub" <${process.env.MAIL_USER || 'noreply@placementhub.local'}>`
     const info = await t.sendMail({ from, to, subject, html })
 
     if (etherealUrl) {
