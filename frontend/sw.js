@@ -1,4 +1,4 @@
-const CACHE_NAME = 'placementhub-v1'
+const CACHE_NAME = 'placementhub-v2'
 const PRECACHE_URLS = [
   '/',
   '/index.html',
