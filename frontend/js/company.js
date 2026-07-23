@@ -105,7 +105,7 @@ async function initDashboard() {
             ${internships.length === 0 ? `
               <div class="empty-state"><div class="empty-state-icon">${ICONS.briefcase}</div><div class="empty-state-title">No internships posted yet</div><div class="empty-state-action"><button class="btn btn-primary" onclick="location.href='${navUrl('my-internships.html')}'">Post internship</button></div></div>
             ` : internships.slice(0, 5).map(i => `
-              <div style="display:flex;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
+              <div style="display:flex;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;flex-wrap:wrap;">
                 <div><div style="font-weight:500;">${escapeHtml(i.title)}</div><div class="text-xs muted">${i.application_count} applicant${i.application_count === 1 ? '' : 's'}</div></div>
                 <span class="badge ${i.status === 'open' ? 'badge-emerald' : 'badge-slate'}">${i.status}</span>
               </div>`).join('')}
@@ -117,9 +117,9 @@ async function initDashboard() {
             ${applications.length === 0 ? `
               <div class="empty-state"><div class="empty-state-icon">${ICONS.users}</div><div class="empty-state-title">No applicants yet</div><div class="empty-state-text">Applicants will appear here once students apply.</div></div>
             ` : applications.slice(0, 5).map(a => `
-              <div style="display:flex;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
+              <div style="display:flex;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;flex-wrap:wrap;">
                 <div><div style="font-weight:500;">${escapeHtml(a.student_name)}</div><div class="text-xs muted">${escapeHtml(a.internship_title)}</div></div>
-                <div style="display:flex;align-items:center;gap:8px;">${statusBadge(a.status)}<span class="text-xs subtle">${relativeTime(a.created_at)}</span></div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${statusBadge(a.status)}<span class="text-xs subtle">${relativeTime(a.created_at)}</span></div>
               </div>`).join('')}
           </div>
         </div>
@@ -144,11 +144,11 @@ async function initProfile() {
           <div class="card">
             <div class="card-header"><div class="card-title">Company details</div><div class="card-subtitle">Students will see this when browsing your internships.</div></div>
             <div class="card-body">
-              <div class="grid grid-2" style="grid-template-columns:1fr;">
+              <div class="grid grid-2">
                 <div class="form-group"><label class="form-label">Company name <span class="req">*</span></label><input type="text" class="form-input" id="company_name" value="${escapeHtml(profile.company_name)}" required /></div>
                 <div class="form-group"><label class="form-label">Industry <span class="req">*</span></label><input type="text" class="form-input" id="industry" value="${escapeHtml(profile.industry)}" required /></div>
               </div>
-              <div class="grid grid-2" style="grid-template-columns:1fr;">
+              <div class="grid grid-2">
                 <div class="form-group"><label class="form-label">Location</label><input type="text" class="form-input" id="location" value="${escapeHtml(profile.location)}" /></div>
                 <div class="form-group"><label class="form-label">Website</label><input type="text" class="form-input" id="website" value="${escapeHtml(profile.website)}" /></div>
               </div>
@@ -223,7 +223,7 @@ function renderInternships(internships) {
         ${deadlineBadge(i.deadline)}
       </div>
       <div class="internship-card-desc">${escapeHtml(i.description)}</div>
-      <div style="display:flex;gap:6px;align-items:center;">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
         <span class="badge badge-slate">${escapeHtml(i.category)}</span>
         <span class="text-xs muted">${i.application_count} applicant${i.application_count === 1 ? '' : 's'}</span>
       </div>
@@ -263,11 +263,11 @@ function openEditor(existing, onDone) {
       </div>
       <div class="modal-body">
         <div class="form-group"><label class="form-label">Title <span class="req">*</span></label><input type="text" class="form-input" id="m-title" value="${existing ? escapeHtml(existing.title) : ''}" /></div>
-        <div class="grid grid-2" style="grid-template-columns:1fr;">
+        <div class="grid grid-2">
           <div class="form-group"><label class="form-label">Category</label><select class="form-select" id="m-category">${CATEGORIES.map(c => `<option ${existing && existing.category === c ? 'selected' : (isNew && c === 'General' ? 'selected' : '')}>${c}</option>`).join('')}</select></div>
           <div class="form-group"><label class="form-label">Application deadline <span class="req">*</span></label><input type="date" class="form-input" id="m-deadline" value="${dl}" /></div>
         </div>
-        <div class="grid grid-2" style="grid-template-columns:1fr;">
+        <div class="grid grid-2">
           <div class="form-group"><label class="form-label">Location <span class="req">*</span></label><input type="text" class="form-input" id="m-location" value="${existing ? escapeHtml(existing.location) : ''}" /></div>
           <div class="form-group"><label class="form-label">Duration <span class="req">*</span></label><input type="text" class="form-input" id="m-duration" value="${existing ? escapeHtml(existing.duration) : ''}" /></div>
         </div>
@@ -323,7 +323,7 @@ async function initApplicants() {
       </div>
       <div class="card" style="margin-bottom:24px;">
         <div class="card-body">
-          <div class="filters" style="grid-template-columns:1fr;">
+          <div class="filters">
             <select class="form-select" id="status-filter">
               <option value="all">All statuses</option>
               <option value="pending">Pending</option>
@@ -373,7 +373,7 @@ async function initApplicants() {
               </div>
               <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
                 ${a.cv_file_name ? `<a class="btn btn-outline btn-sm" href="/uploads/${encodeURIComponent(a.cv_file_name)}" target="_blank">View CV</a>` : ''}
-                <select class="form-select status-select" data-id="${a.id}" style="width:160px;">
+                <select class="form-select status-select" data-id="${a.id}" style="max-width:160px;">
                   ${['pending','reviewed','shortlisted','accepted','rejected'].map(s => `<option value="${s}" ${a.status === s ? 'selected' : ''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
                 </select>
               </div>

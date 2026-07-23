@@ -98,7 +98,7 @@ async function loadOverview() {
           <div class="card-body" style="max-height:360px;overflow-y:auto;">
             ${data.recent_applications.length === 0 ? `<div class="empty-state"><div class="empty-state-icon">${ICONS.file}</div><div class="empty-state-title">No activity yet</div></div>` :
               data.recent_applications.map(a => `
-                <div style="display:flex;justify-content:space-between;gap:8px;padding:8px;border-radius:6px;" class="hover-row">
+                <div style="display:flex;justify-content:space-between;gap:8px;padding:8px;border-radius:6px;flex-wrap:wrap;" class="hover-row">
                   <div style="min-width:0;">
                     <div class="text-sm" style="font-weight:500;">${escapeHtml(a.student_name)}</div>
                     <div class="text-xs muted">${escapeHtml(a.internship_title)}</div>
@@ -377,7 +377,7 @@ async function loadPlacement() {
           <div class="card-body" style="max-height:400px;overflow-y:auto;">
             ${students.length === 0 ? '<div class="empty-state"><div class="empty-state-title">All students are placed!</div></div>' :
               students.map(s => `
-                <label class="placement-row" data-sid="${s.profile_id}" style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;" class="hover-row">
+                <label class="placement-row hover-row" data-sid="${s.profile_id}" style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;">
                   <input type="radio" name="placement-student" value="${s.profile_id}" style="accent-color:var(--primary);">
                   <div>
                     <div class="text-sm" style="font-weight:500;">${escapeHtml(s.name)}</div>
@@ -392,7 +392,7 @@ async function loadPlacement() {
           <div class="card-body" style="max-height:400px;overflow-y:auto;">
             ${internships.length === 0 ? '<div class="empty-state"><div class="empty-state-title">No open internships</div></div>' :
               internships.map(i => `
-                <label class="placement-row" style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;" class="hover-row">
+                <label class="placement-row hover-row" style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;">
                   <input type="radio" name="placement-internship" value="${i.id}" style="accent-color:var(--primary);">
                   <div>
                     <div class="text-sm" style="font-weight:500;">${escapeHtml(i.title)}</div>
@@ -435,15 +435,15 @@ function loadReports() {
   content.innerHTML = `
     <div class="page-header"><div><h1 class="page-title">Reports</h1><p class="page-subtitle">Download CSV exports of platform data.</p></div></div>
     <div class="stats-grid stagger">
-      <div class="card" style="cursor:pointer;" id="report-apps">
-        <div class="card-body" style="text-align:center;padding:32px;">
+        <div class="card" style="cursor:pointer;" id="report-apps">
+        <div class="card-body" style="text-align:center;padding:24px 16px;">
           <div class="stat-card-value">${ICONS.file}</div>
           <div class="stat-card-label" style="margin-top:8px;font-size:16px;">Download Applications CSV</div>
           <p class="text-xs muted">All applications with student and company details</p>
         </div>
       </div>
-      <div class="card" style="cursor:pointer;" id="report-users">
-        <div class="card-body" style="text-align:center;padding:32px;">
+        <div class="card" style="cursor:pointer;" id="report-users">
+        <div class="card-body" style="text-align:center;padding:24px 16px;">
           <div class="stat-card-value">${ICONS.users}</div>
           <div class="stat-card-label" style="margin-top:8px;font-size:16px;">Download Users CSV</div>
           <p class="text-xs muted">All registered users with profile info</p>

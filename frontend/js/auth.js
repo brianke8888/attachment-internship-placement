@@ -1,6 +1,13 @@
 // js/auth.js — shared helpers for auth state, toasts, and route guarding
 import { api, auth } from './api.js'
 
+// ---------- Service Worker (PWA) ----------
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {})
+  })
+}
+
 // ---------- Theme ----------
 function setTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme)

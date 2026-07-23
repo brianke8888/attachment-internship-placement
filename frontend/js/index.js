@@ -8,6 +8,12 @@ if (isAuthenticated()) {
   if (user) redirectByRole(user.role)
 }
 
+// Handle #register hash from landing page
+if (window.location.hash === '#register') {
+  const regTab = document.querySelector('.auth-tab[data-mode="register"]')
+  if (regTab) regTab.click()
+}
+
 // Theme toggle on auth page
 const authThemeBtn = document.getElementById('auth-theme-btn')
 if (authThemeBtn) {

@@ -111,9 +111,9 @@ async function initDashboard() {
                 <div class="empty-state-action"><button class="btn btn-primary" onclick="location.href='${navUrl('browse-internships.html')}'">Browse internships</button></div>
               </div>` : `
               ${applications.slice(0, 5).map(a => `
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
-                  <div style="min-width:0;">
-                    <div style="font-weight:500;truncate;">${escapeHtml(a.internship_title)}</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;flex-wrap:wrap;">
+                  <div style="min-width:0;flex:1;min-width:0;">
+                    <div style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(a.internship_title)}</div>
                     <div class="text-xs muted">${escapeHtml(a.company_name)}</div>
                   </div>
                   <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
@@ -157,7 +157,7 @@ async function initProfile() {
           <div class="card">
             <div class="card-header"><div class="card-title">Student details</div><div class="card-subtitle">This information is shared with companies when you apply.</div></div>
             <div class="card-body">
-              <div class="grid grid-2" style="grid-template-columns:1fr;">
+              <div class="grid grid-2">
                 <div class="form-group"><label class="form-label">Course <span class="req">*</span></label><input type="text" class="form-input" id="course" value="${escapeHtml(profile.course)}" required /></div>
                 <div class="form-group"><label class="form-label">Phone</label><input type="text" class="form-input" id="phone" value="${escapeHtml(profile.phone)}" /></div>
               </div>

@@ -167,7 +167,7 @@ function openApplyModal(data) {
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label class="form-label" style="text-transform:uppercase;font-size:11px;color:var(--text-subtle);">Requirements</label>
+          <label class="form-label" style="text-transform:uppercase;color:var(--text-subtle);">Requirements</label>
           <p class="text-sm muted">${escapeHtml(data.requirements) || 'No specific requirements listed.'}</p>
         </div>
         <div class="form-group">
