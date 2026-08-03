@@ -453,13 +453,37 @@ function loadReports() {
   `
 
   document.getElementById('report-apps').addEventListener('click', () => {
-    const token = localStorage.getItem('token')
-    window.open(`/api/admin/reports/applications?${Date.now()}`, '_blank')
+    downloadCSV('/api/admin/reports/applications', 'applications.csv')
   })
 
   document.getElementById('report-users').addEventListener('click', () => {
-    window.open(`/api/admin/reports/users?${Date.now()}`, '_blank')
+    downloadCSV('/api/admin/reports/users', 'users.csv')
   })
+}
+
+async function downloadCSV(path, filename) {
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${path}?${Date.now()}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      throw new Error((data && data.message) || `Request failed (${res.status})`)
+    }
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+    toast('Download started!')
+  } catch (e) {
+    toast('Error', e.message, 'error')
+  }
 }
 
 loadView()
