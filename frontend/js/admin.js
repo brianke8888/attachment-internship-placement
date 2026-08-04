@@ -431,37 +431,170 @@ async function loadPlacement() {
 }
 
 // ==================== REPORTS ====================
-function loadReports() {
-  content.innerHTML = `
-    <div class="page-header"><div><h1 class="page-title">Reports</h1><p class="page-subtitle">Download CSV exports of platform data.</p></div></div>
-    <div class="stats-grid stagger">
-        <div class="card" style="cursor:pointer;" id="report-apps">
-        <div class="card-body" style="text-align:center;padding:24px 16px;">
-          <div class="stat-card-value">${ICONS.file}</div>
-          <div class="stat-card-label" style="margin-top:8px;font-size:16px;">Download Applications CSV</div>
-          <p class="text-xs muted">All applications with student and company details</p>
+async function loadReports() {
+  content.innerHTML = `<div class="loading-wrap"><div class="spinner spinner-lg"></div></div>`
+  try {
+    const d = await api.getAdminReports()
+    const s = d.stats
+
+    const maxFunnel = Math.max(1, ...d.funnel.map(f => f.count))
+    const maxMonthly = Math.max(1, ...d.monthly.map(m => Math.max(m.applications, m.placements)))
+    const maxCourse = Math.max(1, ...d.by_course.map(c => c.applications))
+    const pctOfTotal = (n) => (s.total_applications > 0 ? Math.round((n / s.total_applications) * 100) : 0)
+
+    content.innerHTML = `
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Reports</h1>
+          <p class="page-subtitle">Placement rates and industry trends to support data-driven decisions.</p>
         </div>
       </div>
-        <div class="card" style="cursor:pointer;" id="report-users">
-        <div class="card-body" style="text-align:center;padding:24px 16px;">
-          <div class="stat-card-value">${ICONS.users}</div>
-          <div class="stat-card-label" style="margin-top:8px;font-size:16px;">Download Users CSV</div>
-          <p class="text-xs muted">All registered users with profile info</p>
+
+      <div class="stats-grid stagger">
+        <div class="stat-card">
+          <div class="stat-card-top"><span class="stat-card-label">Placement rate</span></div>
+          <div class="flex items-center gap-3 mt-2">
+            <div class="progress-ring emerald" style="--pct:${s.placement_rate}%;"><span>${s.placement_rate}%</span></div>
+            <div class="text-sm muted">${s.placed_students} of ${s.total_students} students placed</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-top"><span class="stat-card-label">Acceptance rate</span></div>
+          <div class="flex items-center gap-3 mt-2">
+            <div class="progress-ring sky" style="--pct:${s.acceptance_rate}%;"><span>${s.acceptance_rate}%</span></div>
+            <div class="text-sm muted">${s.accepted_applications} of ${s.total_applications} applications</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-top"><span class="stat-card-label">Unplaced students</span><div class="stat-card-icon amber">${ICONS.user}</div></div>
+          <div class="stat-card-value">${s.unplaced_students}</div>
+          <div class="stat-card-trend ${s.unplaced_students > 0 ? 'down' : 'up'}">${s.unplaced_students > 0 ? 'Action needed — review placements' : 'All students placed'}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-top"><span class="stat-card-label">Avg apps / internship</span><div class="stat-card-icon violet">${ICONS.file}</div></div>
+          <div class="stat-card-value">${s.avg_applications_per_internship}</div>
+          <div class="stat-card-trend up">${s.open_internships} internships open</div>
         </div>
       </div>
-    </div>
-  `
 
-  document.getElementById('report-apps').addEventListener('click', () => {
-    downloadCSV('/api/admin/reports/applications', 'applications.csv')
-  })
+      <div class="grid grid-2 stagger">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Placement funnel</div></div>
+          <div class="card-body">
+            ${d.funnel.length === 0 ? `<div class="empty-state"><div class="empty-state-icon">${ICONS.file}</div><div class="empty-state-title">No applications yet</div></div>` :
+              d.funnel.map(f => `
+                <div class="status-bar-row">
+                  <div class="status-bar-head"><span style="text-transform:capitalize;font-weight:500;">${f.status}</span><span class="muted">${f.count} · ${pctOfTotal(f.count)}%</span></div>
+                  <div class="status-bar-track"><div class="status-bar-fill ${f.status}" style="width:${Math.max(2, Math.round((f.count / maxFunnel) * 100))}%;"></div></div>
+                </div>`).join('')}
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Monthly activity (last 6 months)</div></div>
+          <div class="card-body">
+            ${d.monthly.length === 0 ? `<div class="empty-state"><div class="empty-state-icon">${ICONS.trending}</div><div class="empty-state-title">No activity yet</div></div>` : `
+              <div class="chart-bars" style="height:140px;">
+                ${d.monthly.map(m => `
+                  <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;">
+                    <div class="chart-bar" style="background:var(--sky);height:${Math.max(4, Math.round((m.applications / maxMonthly) * 120))}px;" title="${m.applications} applications"></div>
+                    <div class="chart-bar" style="background:var(--emerald);height:${Math.max(4, Math.round((m.placements / maxMonthly) * 120))}px;" title="${m.placements} placements"></div>
+                    <span class="text-xs muted">${m.month.slice(5)}</span>
+                  </div>`).join('')}
+              </div>
+              <div class="flex items-center gap-4 mt-2 text-xs muted">
+                <span class="flex items-center gap-2"><span style="width:10px;height:10px;border-radius:2px;background:var(--sky);display:inline-block;"></span> Applications</span>
+                <span class="flex items-center gap-2"><span style="width:10px;height:10px;border-radius:2px;background:var(--emerald);display:inline-block;"></span> Placements</span>
+              </div>`}
+          </div>
+        </div>
+      </div>
 
-  document.getElementById('report-users').addEventListener('click', () => {
-    downloadCSV('/api/admin/reports/users', 'users.csv')
-  })
+      <div class="grid grid-2 stagger">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Placement rate by course</div></div>
+          <div class="card-body">
+            ${d.by_course.length === 0 ? `<div class="empty-state"><div class="empty-state-icon">${ICONS.user}</div><div class="empty-state-title">No placement data yet</div></div>` :
+              d.by_course.map(c => {
+                const rate = c.applications > 0 ? Math.round((c.placements / c.applications) * 100) : 0
+                return `<div class="status-bar-row">
+                  <div class="status-bar-head"><span style="font-weight:500;">${escapeHtml(c.course)}</span><span class="muted">${c.placements}/${c.applications} placed</span></div>
+                  <div class="status-bar-track"><div class="status-bar-fill accepted" style="width:${Math.max(2, Math.round((c.applications / maxCourse) * 100))}%;"></div></div>
+                  <div class="text-xs subtle" style="margin-top:4px;">${rate}% placement rate</div>
+                </div>`
+              }).join('')}
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Industry trends</div></div>
+          <div class="card-body" style="padding:0;">
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead><tr><th>Industry</th><th>Apps</th><th>Placed</th><th>Rate</th></tr></thead>
+                <tbody>
+                  ${d.by_industry.length === 0 ? `<tr><td colspan="4" class="muted">No industry data yet</td></tr>` :
+                    d.by_industry.map(i => {
+                      const rate = i.applications > 0 ? Math.round((i.placements / i.applications) * 100) : 0
+                      return `<tr>
+                        <td><div style="font-weight:500;">${escapeHtml(i.industry)}</div><div class="text-xs muted">${i.internships} internships</div></td>
+                        <td class="text-sm">${i.applications}</td>
+                        <td class="text-sm">${i.placements}</td>
+                        <td><span class="badge ${rate >= 50 ? 'badge-emerald' : rate >= 25 ? 'badge-amber' : 'badge-rose'}">${rate}%</span></td>
+                      </tr>`
+                    }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-2 stagger">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Download full report</div></div>
+          <div class="card-body">
+            <p class="text-sm muted" style="margin-bottom:12px;">Complete placement &amp; industry trends report — key metrics, funnel, courses, industries and monthly activity — as a single PDF.</p>
+            <button class="btn btn-primary" id="report-pdf-overview">${ICONS.file} Download PDF Report</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Export datasets</div></div>
+          <div class="card-body">
+            <div class="grid grid-2" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
+              ${[
+                { label: 'Applications', desc: 'All applications with student and company details', csv: '/api/admin/reports/applications', csvFile: 'applications.csv', pdf: '/api/admin/reports/applications/pdf', pdfFile: 'applications.pdf' },
+                { label: 'Users', desc: 'All registered users with profile info', csv: '/api/admin/reports/users', csvFile: 'users.csv', pdf: '/api/admin/reports/users/pdf', pdfFile: 'users.pdf' },
+                { label: 'Placements', desc: 'Accepted placements with course and industry', csv: '/api/admin/reports/placements', csvFile: 'placements.csv', pdf: '/api/admin/reports/placements/pdf', pdfFile: 'placements.pdf' },
+                { label: 'Industry trends', desc: 'Internships, applications and placements by industry', csv: '/api/admin/reports/industry-trends', csvFile: 'industry-trends.csv', pdf: '/api/admin/reports/industry-trends/pdf', pdfFile: 'industry-trends.pdf' },
+              ].map(r => `
+                <div style="border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
+                  <div class="stat-card-label" style="font-size:15px;font-weight:600;">${r.label}</div>
+                  <p class="text-xs muted" style="margin:6px 0 12px;">${r.desc}</p>
+                  <div class="flex gap-2 flex-wrap">
+                    <button class="btn btn-outline btn-sm" data-csv="${r.csv}" data-csvfile="${r.csvFile}">CSV</button>
+                    <button class="btn btn-outline btn-sm" data-pdf="${r.pdf}" data-pdffile="${r.pdfFile}">PDF</button>
+                  </div>
+                </div>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    `
+
+    document.getElementById('report-pdf-overview').addEventListener('click', () => {
+      downloadFile('/api/admin/reports/overview/pdf', 'placement-trends-report.pdf')
+    })
+    document.querySelectorAll('[data-csv]').forEach(b => {
+      b.addEventListener('click', () => downloadFile(b.dataset.csv, b.dataset.csvfile))
+    })
+    document.querySelectorAll('[data-pdf]').forEach(b => {
+      b.addEventListener('click', () => downloadFile(b.dataset.pdf, b.dataset.pdffile))
+    })
+  } catch (err) {
+    content.innerHTML = `<div class="form-error">${escapeHtml(err.message)}</div>`
+  }
 }
 
-async function downloadCSV(path, filename) {
+async function downloadFile(path, filename) {
   try {
     const token = localStorage.getItem('token')
     const res = await fetch(`${path}?${Date.now()}`, {

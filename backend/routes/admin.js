@@ -4,6 +4,7 @@ const router = express.Router()
 const { pool } = require('../db')
 const { authRequired, requireRole } = require('../middleware/auth')
 const { sendEmail, emailTemplates } = require('../email')
+const { buildPdf, sectionTitle, statsGrid, drawTable } = require('../pdf')
 
 // GET /api/admin/stats
 router.get('/stats', authRequired, requireRole('admin'), async (req, res, next) => {
@@ -270,30 +271,191 @@ router.get('/applications', authRequired, requireRole('admin'), async (req, res,
   }
 })
 
+// ==================== Reports data helpers ====================
+async function getOverviewData() {
+  const [[{ total_students }]] = await pool.query("SELECT COUNT(*) AS total_students FROM users WHERE role = 'student'")
+  const [[{ placed_students }]] = await pool.query(
+    'SELECT COUNT(DISTINCT a.student_id) AS placed_students FROM applications a WHERE a.status = ?',
+    ['accepted']
+  )
+  const [[{ total_applications }]] = await pool.query('SELECT COUNT(*) AS total_applications FROM applications')
+  const [[{ accepted_applications }]] = await pool.query(
+    'SELECT COUNT(*) AS accepted_applications FROM applications WHERE status = ?',
+    ['accepted']
+  )
+  const [[{ total_internships }]] = await pool.query('SELECT COUNT(*) AS total_internships FROM internships')
+  const [[{ open_internships }]] = await pool.query(
+    'SELECT COUNT(*) AS open_internships FROM internships WHERE status = ? AND is_approved = 1',
+    ['open']
+  )
+  const [[{ avg_apps }]] = await pool.query(
+    'SELECT COALESCE(AVG(cnt), 0) AS avg_apps FROM (SELECT COUNT(*) AS cnt FROM applications GROUP BY internship_id) t'
+  )
+
+  const [funnel] = await pool.query(
+    `SELECT status, COUNT(*) AS count FROM applications
+     GROUP BY status
+     ORDER BY FIELD(status, ?, ?, ?, ?, ?)`,
+    ['pending', 'reviewed', 'shortlisted', 'accepted', 'rejected']
+  )
+
+  const [byCourse] = await pool.query(
+    `SELECT COALESCE(NULLIF(TRIM(sp.course), ''), 'Not specified') AS course,
+            COUNT(*) AS applications,
+            COALESCE(SUM(a.status = ?), 0) AS placements
+     FROM applications a
+     JOIN student_profiles sp ON sp.id = a.student_id
+     GROUP BY course
+     ORDER BY applications DESC
+     LIMIT 10`,
+    ['accepted']
+  )
+
+  const [byIndustry] = await pool.query(
+    `SELECT COALESCE(NULLIF(TRIM(cp.industry), ''), 'Not specified') AS industry,
+            COUNT(DISTINCT i.id) AS internships,
+            COUNT(a.id) AS applications,
+            COALESCE(SUM(a.status = ?), 0) AS placements
+     FROM company_profiles cp
+     LEFT JOIN internships i ON i.company_id = cp.id
+     LEFT JOIN applications a ON a.internship_id = i.id
+     WHERE cp.status = 'approved'
+     GROUP BY industry
+     HAVING internships > 0 OR applications > 0
+     ORDER BY applications DESC
+     LIMIT 10`,
+    ['accepted']
+  )
+
+  const [monthly] = await pool.query(
+    `SELECT DATE_FORMAT(a.created_at, '%Y-%m') AS month,
+            COUNT(*) AS applications,
+            COALESCE(SUM(a.status = ?), 0) AS placements
+     FROM applications a
+     WHERE a.created_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+     GROUP BY DATE_FORMAT(a.created_at, '%Y-%m')
+     ORDER BY month ASC`,
+    ['accepted']
+  )
+
+  const pct = (n, d) => (d > 0 ? Math.round((n / d) * 1000) / 10 : 0)
+
+  return {
+    stats: {
+      total_students,
+      placed_students,
+      unplaced_students: total_students - placed_students,
+      placement_rate: pct(placed_students, total_students),
+      total_applications,
+      accepted_applications,
+      acceptance_rate: pct(accepted_applications, total_applications),
+      total_internships,
+      open_internships,
+      avg_applications_per_internship: Math.round(avg_apps * 10) / 10,
+    },
+    funnel,
+    by_course: byCourse,
+    by_industry: byIndustry,
+    monthly,
+  }
+}
+
+async function getApplicationsRows(filters = {}) {
+  const where = []
+  const params = []
+  if (filters.status) { where.push('a.status = ?'); params.push(filters.status) }
+  if (filters.from) { where.push('a.created_at >= ?'); params.push(filters.from) }
+  if (filters.to) { where.push('a.created_at <= ?'); params.push(filters.to) }
+
+  const [rows] = await pool.query(
+    `SELECT a.id, a.status, a.created_at AS date,
+            u.name AS student_name, u.email AS student_email,
+            sp.course, sp.skills,
+            i.title AS internship_title,
+            cp.company_name
+     FROM applications a
+     JOIN student_profiles sp ON sp.id = a.student_id
+     JOIN users u ON u.id = sp.user_id
+     JOIN internships i ON i.id = a.internship_id
+     JOIN company_profiles cp ON cp.id = i.company_id
+     ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+     ORDER BY a.created_at DESC`,
+    params
+  )
+  return rows
+}
+
+async function getUsersRows() {
+  const [rows] = await pool.query(
+    `SELECT u.id, u.name, u.email, u.role, u.is_active, u.created_at AS date,
+            sp.course,
+            cp.company_name, cp.industry, cp.status AS company_status
+     FROM users u
+     LEFT JOIN student_profiles sp ON sp.user_id = u.id
+     LEFT JOIN company_profiles cp ON cp.user_id = u.id
+     ORDER BY u.created_at DESC`
+  )
+  return rows
+}
+
+async function getPlacementsRows() {
+  const [rows] = await pool.query(
+    `SELECT a.id, a.created_at AS date,
+            u.name AS student_name, u.email AS student_email, sp.course,
+            i.title AS internship_title, cp.company_name, cp.industry
+     FROM applications a
+     JOIN student_profiles sp ON sp.id = a.student_id
+     JOIN users u ON u.id = sp.user_id
+     JOIN internships i ON i.id = a.internship_id
+     JOIN company_profiles cp ON cp.id = i.company_id
+     WHERE a.status = 'accepted'
+     ORDER BY a.created_at DESC`
+  )
+  return rows
+}
+
+async function getIndustryTrendsRows() {
+  const [rows] = await pool.query(
+    `SELECT COALESCE(NULLIF(TRIM(cp.industry), ''), 'Not specified') AS industry,
+            COUNT(DISTINCT i.id) AS internships,
+            COUNT(a.id) AS applications,
+            COALESCE(SUM(a.status = 'accepted'), 0) AS placements
+     FROM company_profiles cp
+     LEFT JOIN internships i ON i.company_id = cp.id
+     LEFT JOIN applications a ON a.internship_id = i.id
+     WHERE cp.status = 'approved'
+     GROUP BY industry
+     HAVING internships > 0 OR applications > 0
+     ORDER BY applications DESC`
+  )
+  return rows
+}
+
+// ==================== Reports endpoints ====================
+
+const ratePct = (n, d) => (d > 0 ? Math.round((n / d) * 1000) / 10 : 0)
+const generatedAt = () => 'Generated ' + new Date().toLocaleString() + ' — PlacementHub administrators'
+
+async function pdfReport(res, filename, title, build, opts = {}) {
+  const buf = await buildPdf(title, generatedAt(), build, opts)
+  res.setHeader('Content-Type', 'application/pdf')
+  res.setHeader('Content-Disposition', `attachment; filename=${filename}`)
+  res.send(buf)
+}
+
+// GET /api/admin/reports/overview
+router.get('/reports/overview', authRequired, requireRole('admin'), async (req, res, next) => {
+  try {
+    res.json(await getOverviewData())
+  } catch (err) {
+    next(err)
+  }
+})
+
 // CSV export: /api/admin/reports/applications?status=&from=&to=
 router.get('/reports/applications', authRequired, requireRole('admin'), async (req, res, next) => {
   try {
-    const where = []
-    const params = []
-    if (req.query.status) { where.push('a.status = ?'); params.push(req.query.status) }
-    if (req.query.from) { where.push('a.created_at >= ?'); params.push(req.query.from) }
-    if (req.query.to) { where.push('a.created_at <= ?'); params.push(req.query.to) }
-
-    const [rows] = await pool.query(
-      `SELECT a.id, a.status, a.created_at AS date,
-              u.name AS student_name, u.email AS student_email,
-              sp.course, sp.skills,
-              i.title AS internship_title,
-              cp.company_name
-       FROM applications a
-       JOIN student_profiles sp ON sp.id = a.student_id
-       JOIN users u ON u.id = sp.user_id
-       JOIN internships i ON i.id = a.internship_id
-       JOIN company_profiles cp ON cp.id = i.company_id
-       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
-       ORDER BY a.created_at DESC`,
-      params
-    )
+    const rows = await getApplicationsRows(req.query)
 
     const header = 'ID,Student,Email,Course,Skills,Internship,Company,Status,Date'
     const csv = rows.map(r =>
@@ -311,15 +473,7 @@ router.get('/reports/applications', authRequired, requireRole('admin'), async (r
 // CSV export: /api/admin/reports/users
 router.get('/reports/users', authRequired, requireRole('admin'), async (req, res, next) => {
   try {
-    const [rows] = await pool.query(
-      `SELECT u.id, u.name, u.email, u.role, u.is_active, u.created_at AS date,
-              sp.course,
-              cp.company_name, cp.industry, cp.status AS company_status
-       FROM users u
-       LEFT JOIN student_profiles sp ON sp.user_id = u.id
-       LEFT JOIN company_profiles cp ON cp.user_id = u.id
-       ORDER BY u.created_at DESC`
-    )
+    const rows = await getUsersRows()
 
     const header = 'ID,Name,Email,Role,Active,Course/Company,Industry,Company Status,Date'
     const csv = rows.map(r =>
@@ -329,6 +483,159 @@ router.get('/reports/users', authRequired, requireRole('admin'), async (req, res
     res.setHeader('Content-Type', 'text/csv')
     res.setHeader('Content-Disposition', 'attachment; filename=users.csv')
     res.send(header + '\n' + csv)
+  } catch (err) {
+    next(err)
+  }
+})
+
+// CSV export: /api/admin/reports/placements
+router.get('/reports/placements', authRequired, requireRole('admin'), async (req, res, next) => {
+  try {
+    const rows = await getPlacementsRows()
+
+    const header = 'ID,Student,Email,Course,Internship,Company,Industry,Date'
+    const csv = rows.map(r =>
+      `"${r.id}","${csvEscape(r.student_name)}","${r.student_email}","${csvEscape(r.course)}","${csvEscape(r.internship_title)}","${csvEscape(r.company_name)}","${csvEscape(r.industry)}","${r.date}"`
+    ).join('\n')
+
+    res.setHeader('Content-Type', 'text/csv')
+    res.setHeader('Content-Disposition', 'attachment; filename=placements.csv')
+    res.send(header + '\n' + csv)
+  } catch (err) {
+    next(err)
+  }
+})
+
+// CSV export: /api/admin/reports/industry-trends
+router.get('/reports/industry-trends', authRequired, requireRole('admin'), async (req, res, next) => {
+  try {
+    const rows = await getIndustryTrendsRows()
+
+    const header = 'Industry,Internships,Applications,Placements,Placement Rate'
+    const csv = rows.map(r =>
+      `"${csvEscape(r.industry)}","${r.internships}","${r.applications}","${r.placements}","${ratePct(r.placements, r.applications)}%"`
+    ).join('\n')
+
+    res.setHeader('Content-Type', 'text/csv')
+    res.setHeader('Content-Disposition', 'attachment; filename=industry-trends.csv')
+    res.send(header + '\n' + csv)
+  } catch (err) {
+    next(err)
+  }
+})
+
+// PDF export: /api/admin/reports/overview/pdf — full placement + industry trends report
+router.get('/reports/overview/pdf', authRequired, requireRole('admin'), async (req, res, next) => {
+  try {
+    const d = await getOverviewData()
+    const s = d.stats
+    const pctOfTotal = (n) => (s.total_applications > 0 ? Math.round((n / s.total_applications) * 100) : 0)
+
+    await pdfReport(res, 'placement-trends-report.pdf', 'PlacementHub — Placement & Industry Trends Report', (doc) => {
+      sectionTitle(doc, 'Key metrics')
+      statsGrid(doc, [
+        { label: 'Placement rate', value: s.placement_rate + '%' },
+        { label: 'Acceptance rate', value: s.acceptance_rate + '%' },
+        { label: 'Students placed', value: s.placed_students + ' / ' + s.total_students },
+        { label: 'Unplaced students', value: s.unplaced_students, color: s.unplaced_students > 0 ? '#d97706' : '#059669' },
+        { label: 'Applications', value: s.total_applications },
+        { label: 'Accepted applications', value: s.accepted_applications },
+        { label: 'Open internships', value: s.open_internships + ' / ' + s.total_internships },
+        { label: 'Avg apps / internship', value: s.avg_applications_per_internship },
+      ], 4)
+
+      sectionTitle(doc, 'Placement funnel')
+      drawTable(doc,
+        ['Status', 'Count', '% of total'],
+        d.funnel.map(f => [f.status, f.count, pctOfTotal(f.count) + '%']),
+        [0.4, 0.3, 0.3]
+      )
+
+      sectionTitle(doc, 'Placement rate by course')
+      drawTable(doc,
+        ['Course', 'Applications', 'Placements', 'Rate'],
+        d.by_course.map(c => [c.course, c.applications, c.placements, ratePct(c.placements, c.applications) + '%']),
+        [0.4, 0.2, 0.2, 0.2]
+      )
+
+      sectionTitle(doc, 'Industry trends')
+      drawTable(doc,
+        ['Industry', 'Internships', 'Applications', 'Placements', 'Rate'],
+        d.by_industry.map(i => [i.industry, i.internships, i.applications, i.placements, ratePct(i.placements, i.applications) + '%']),
+        [0.28, 0.18, 0.18, 0.18, 0.18]
+      )
+
+      sectionTitle(doc, 'Monthly activity (last 6 months)')
+      drawTable(doc,
+        ['Month', 'Applications', 'Placements'],
+        d.monthly.map(m => [m.month, m.applications, m.placements]),
+        [0.4, 0.3, 0.3]
+      )
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// PDF export: /api/admin/reports/applications/pdf
+router.get('/reports/applications/pdf', authRequired, requireRole('admin'), async (req, res, next) => {
+  try {
+    const rows = await getApplicationsRows()
+    await pdfReport(res, 'applications.pdf', 'Applications Report', (doc) => {
+      drawTable(doc,
+        ['ID', 'Student', 'Email', 'Course', 'Skills', 'Internship', 'Company', 'Status', 'Date'],
+        rows.map(r => [r.id, r.student_name, r.student_email, r.course, r.skills, r.internship_title, r.company_name, r.status, r.date]),
+        [0.08, 0.15, 0.15, 0.10, 0.10, 0.16, 0.14, 0.07, 0.05]
+      )
+    }, { layout: 'landscape' })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// PDF export: /api/admin/reports/users/pdf
+router.get('/reports/users/pdf', authRequired, requireRole('admin'), async (req, res, next) => {
+  try {
+    const rows = await getUsersRows()
+    await pdfReport(res, 'users.pdf', 'Users Report', (doc) => {
+      drawTable(doc,
+        ['ID', 'Name', 'Email', 'Role', 'Active', 'Course/Company', 'Industry', 'Company Status', 'Date'],
+        rows.map(r => [r.id, r.name, r.email, r.role, r.is_active ? 'Yes' : 'No', r.course || r.company_name || '', r.industry || '', r.company_status || '', r.date]),
+        [0.08, 0.15, 0.16, 0.08, 0.07, 0.16, 0.14, 0.10, 0.06]
+      )
+    }, { layout: 'landscape' })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// PDF export: /api/admin/reports/placements/pdf
+router.get('/reports/placements/pdf', authRequired, requireRole('admin'), async (req, res, next) => {
+  try {
+    const rows = await getPlacementsRows()
+    await pdfReport(res, 'placements.pdf', 'Placements Report', (doc) => {
+      drawTable(doc,
+        ['ID', 'Student', 'Email', 'Course', 'Internship', 'Company', 'Industry', 'Date'],
+        rows.map(r => [r.id, r.student_name, r.student_email, r.course, r.internship_title, r.company_name, r.industry, r.date]),
+        [0.08, 0.15, 0.16, 0.12, 0.18, 0.14, 0.13, 0.04]
+      )
+    }, { layout: 'landscape' })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// PDF export: /api/admin/reports/industry-trends/pdf
+router.get('/reports/industry-trends/pdf', authRequired, requireRole('admin'), async (req, res, next) => {
+  try {
+    const rows = await getIndustryTrendsRows()
+    await pdfReport(res, 'industry-trends.pdf', 'Industry Trends Report', (doc) => {
+      drawTable(doc,
+        ['Industry', 'Internships', 'Applications', 'Placements', 'Placement Rate'],
+        rows.map(r => [r.industry, r.internships, r.applications, r.placements, ratePct(r.placements, r.applications) + '%']),
+        [0.28, 0.18, 0.18, 0.18, 0.18]
+      )
+    })
   } catch (err) {
     next(err)
   }

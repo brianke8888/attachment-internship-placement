@@ -115,6 +115,7 @@ export const api = {
   activateUser: (id) => request('/admin/users/' + id + '/activate', { method: 'POST' }),
   getUnplacedStudents: () => request('/admin/unplaced'),
   createPlacement: (body) => request('/admin/placements', { method: 'POST', body }),
+  getAdminReports: () => request('/admin/reports/overview'),
 }
 
 export const auth = { getToken, setToken, clearToken }
